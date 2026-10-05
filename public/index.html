@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#141719">
+  <meta name="description" content="Tu aventura académica: organizá parciales, finales y entregas en un calendario de mazmorras.">
+  <link rel="icon" href="/assets/favicon.ico">
+  <title>Órbita · Dungeon Calendar</title>
+  
+  <!-- Tipografías Pixel Art 8-bit de Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="no-crt" data-view="month">
+  <a class="skip-link" href="#mainContent">Ir al calendario</a>
+  <!-- Overlay de Scanlines y Efecto CRT Retro -->
+  <div class="crt-overlay" aria-hidden="true"></div>
+
+  <!-- HUD SUPERIOR RETRO -->
+  <header class="retro-hud">
+    <div class="hud-topbar">
+      <div class="brand-section">
+        <img class="brand-icon" src="/assets/sprites/frames/hero_idle_0.png" alt="" width="38" height="48">
+        <div>
+          <h1 class="brand-title">ÓRBITA<span class="brand-divider">/</span><span>Dungeon Calendar</span></h1>
+          <p class="brand-sub">TU AVENTURA ACADÉMICA</p>
+        </div>
+      </div>
+
+      <!-- Estadísticas del Héroe -->
+      <div class="hud-stats">
+        <div class="stat-item">
+          <span class="stat-label">LVL:</span>
+          <span class="stat-val" id="hudLvl">1</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">EXP:</span>
+          <span class="stat-val" id="hudExp">0%</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">ORO:</span>
+          <span class="stat-val" id="hudGold">150G</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">HORA:</span>
+          <span class="stat-val" id="hudClock">--:--:--</span>
+        </div>
+      </div>
+
+      <!-- Acciones de Cabecera -->
+      <div class="hud-buttons">
+        <button class="btn-pixel utility-btn" id="soundToggle" type="button" aria-pressed="false">Sonido: off</button>
+        <button class="btn-pixel utility-btn" id="crtToggle" type="button" aria-pressed="false">CRT: off</button>
+        <button class="btn-pixel utility-btn" id="bestiaryBtn" type="button">Bestiario</button>
+        <button class="btn-pixel btn-gold" id="newQuestBtn" type="button">+ Nueva misión</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- PESTAÑAS DE VISTAS ESTILO CARTUCHO DE JUEGO -->
+  <nav class="views-nav-container" aria-label="Modos de Exploración">
+    <button class="view-tab" type="button" data-view="lobby">
+      <span class="nav-glyph" aria-hidden="true">⌂</span> Gremio
+    </button>
+    <button class="view-tab" type="button" data-view="day">
+      Día
+    </button>
+    <button class="view-tab" type="button" data-view="week">
+      Semana
+    </button>
+    <button class="view-tab active" type="button" data-view="month" aria-current="page">
+      Mes
+    </button>
+    <button class="view-tab" type="button" data-view="year">
+      Año
+    </button>
+  </nav>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="main-wrapper" id="mainContent" tabindex="-1">
+    <section class="adventure-banner" aria-labelledby="adventureTitle">
+      <div class="adventure-copy">
+        <span class="eyebrow">DIARIO DEL AVENTURERO <span class="live-dot" aria-hidden="true"></span></span>
+        <h2 id="adventureTitle">Un día más.<br>Un nivel más.</h2>
+        <p>Tus parciales son guardianes. Tus finales, dragones.<br>Prepará tu próxima conquista.</p>
+        <div class="adventure-summary" id="adventureSummary">Cargando el tablón de misiones…</div>
+      </div>
+      <div class="adventure-scene" aria-hidden="true">
+        <img class="scene-hero" src="/assets/sprites/frames/hero_idle_0.png" alt="">
+        <img class="scene-goblin" src="/assets/sprites/frames/goblin_idle_0.png" alt="">
+        <span class="scene-caption">EL CONOCIMIENTO ES TU MEJOR ARMA</span>
+      </div>
+    </section>
+    <div class="notice" id="appNotice" role="status" hidden></div>
+
+    <!-- 0. PANEL LOBBY DEL GREMIO (ISOMÉTRICO 16-BIT) -->
+    <section class="view-panel" id="panelLobby" aria-labelledby="lobbyTitle">
+      <div class="lobby-wrapper">
+        <div class="lobby-status-bar">
+          <div>
+            <h2 class="panel-title" id="lobbyTitle">El gremio</h2>
+            <p class="panel-subtitle">Movete con WASD / flechas o tocá el suelo. Espacio para interactuar.</p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span class="lobby-hint-badge" id="lobbyActionHint">[ESPACIO] Interactuar</span>
+          </div>
+        </div>
+
+        <!-- Canvas Interactivo del Lobby Isométrico -->
+        <div class="lobby-canvas-wrapper">
+          <canvas id="lobbyCanvas" width="1024" height="1024" tabindex="0" aria-label="Gremio explorable. Movete con WASD o flechas y usá Espacio para interactuar."></canvas>
+        </div>
+
+        <!-- Barra de Estaciones y D-Pad -->
+        <div class="lobby-controls-bar">
+          <div class="lobby-quick-stations">
+            <button class="btn-pixel" id="quickBtnAltar" type="button"><img src="/assets/sprites/frames/goddess_statue_cutout.png" alt="">Altar</button>
+            <button class="btn-pixel btn-danger" id="quickBtnArmory" type="button"><img src="/assets/sprites/frames/hero_idle_0.png" alt="">Armería</button>
+            <button class="btn-pixel btn-primary" id="quickBtnBedroom" type="button">◇ Descanso</button>
+            <button class="btn-pixel" style="background: var(--color-purple); color: #fff;" id="quickBtnMagic" type="button"><img src="/assets/sprites/frames/slime_idle_0.png" alt="">Alquimia</button>
+            <button class="btn-pixel btn-gold" id="quickBtnArtifacts" type="button">✧ Artefactos</button>
+            <button class="btn-pixel" style="background: #fb923c; color: #000;" id="quickBtnCat" type="button">Pixel, el gato</button>
+            <button class="btn-pixel btn-green" id="quickBtnPortal" type="button">→ Calendario</button>
+          </div>
+
+          <!-- Controles en Pantalla (D-Pad Virtual) -->
+          <div class="lobby-dpad-deck">
+            <div class="dpad-cross">
+              <button class="dpad-btn dpad-up" id="dpadUp" aria-label="Mover arriba" type="button">▲</button>
+              <button class="dpad-btn dpad-left" id="dpadLeft" aria-label="Mover a la izquierda" type="button">◀</button>
+              <button class="dpad-btn dpad-right" id="dpadRight" aria-label="Mover a la derecha" type="button">▶</button>
+              <button class="dpad-btn dpad-down" id="dpadDown" aria-label="Mover abajo" type="button">▼</button>
+            </div>
+            <button class="btn-pixel dpad-action-btn" id="dpadAction" type="button">Interactuar</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 1. VISTA DE HORARIO EN EL DÍA (PASILLO DE LAS 24 HORAS) -->
+    <section class="view-panel" id="panelDay" aria-labelledby="dayTitle">
+      <div class="panel-toolbar">
+        <div class="panel-title-area">
+          <button class="btn-pixel" id="btnPrevDay" type="button">◀ DÍA ANTERIOR</button>
+          <div>
+            <h2 class="panel-title" id="dayTitle">PASILLO DE LAS HORAS</h2>
+            <p class="panel-subtitle">Explorá las 24 horas y elegí tus actividades.</p>
+          </div>
+          <button class="btn-pixel" id="btnNextDay" type="button">DÍA SIGUIENTE ▶</button>
+        </div>
+        <button class="btn-pixel btn-gold" id="btnTodayDay" type="button">Hoy</button>
+      </div>
+
+      <div class="day-corridor-wrap">
+        <div class="day-corridor-track" id="dayTrack">
+          <!-- Generado dinámicamente: 24 cámaras horarias -->
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. VISTA DE DÍA DE LA SEMANA (LAS 7 CÁMARAS) -->
+    <section class="view-panel" id="panelWeek" aria-labelledby="weekTitle">
+      <div class="panel-toolbar">
+        <div class="panel-title-area">
+          <button class="btn-pixel" id="btnPrevWeek" type="button">◀ SEMANA ANTERIOR</button>
+          <div>
+            <h2 class="panel-title" id="weekTitle">LAS 7 CÁMARAS DE LA SEMANA</h2>
+            <p class="panel-subtitle">Cada día, una cámara. Elegí una misión para ver su guardián.</p>
+          </div>
+          <button class="btn-pixel" id="btnNextWeek" type="button">SEMANA SIGUIENTE ▶</button>
+        </div>
+        <button class="btn-pixel btn-gold" id="btnTodayWeek" type="button">Hoy</button>
+      </div>
+
+      <div class="week-chambers-grid" id="weekChambers">
+        <!-- Generado dinámicamente: 7 cámaras -->
+      </div>
+    </section>
+
+    <!-- 3. VISTA DE DÍA DEL MES (CALABOZO DE 35 CELDAS) -->
+    <section class="view-panel active" id="panelMonth" aria-labelledby="monthTitle">
+      <div class="panel-toolbar">
+        <div class="panel-title-area">
+          <button class="btn-pixel" id="btnPrevMonth" type="button">◀ MES ANTERIOR</button>
+          <div>
+            <h2 class="panel-title" id="monthTitle">CALABOZO MENSUAL</h2>
+            <p class="panel-subtitle">Elegí una cámara para ver sus misiones.</p>
+          </div>
+          <button class="btn-pixel" id="btnNextMonth" type="button">MES SIGUIENTE ▶</button>
+        </div>
+        <button class="btn-pixel btn-gold" id="btnTodayMonth" type="button">Hoy</button>
+      </div>
+
+      <div class="month-grid-shell">
+        <div class="month-weekdays-row">
+          <span>LUN</span><span>MAR</span><span>MIÉ</span><span>JUE</span><span>VIE</span><span>SÁB</span><span>DOM</span>
+        </div>
+        <div class="month-tiles-grid" id="monthTiles">
+          <!-- Generado dinámicamente: celdas del mes -->
+        </div>
+      </div>
+      <div class="calendar-legend" aria-label="Tipos de misión">
+        <span><img src="/assets/sprites/frames/goblin_idle_0.png" alt="">Parcial</span>
+        <span><img src="/assets/sprites/frames/dragon_idle_0.png" alt="">Final</span>
+        <span><img src="/assets/sprites/frames/slime_idle_0.png" alt="">Tarea / clase</span>
+        <span class="legend-complete">✓ Completada</span>
+        <span class="legend-today">□ Hoy</span>
+      </div>
+    </section>
+
+    <!-- 4. VISTA DE DÍA DEL AÑO (MAPA DEL REINO DE LOS 12 CASTILLOS) -->
+    <section class="view-panel" id="panelYear" aria-labelledby="yearTitle">
+      <div class="panel-toolbar">
+        <div class="panel-title-area">
+          <button class="btn-pixel" id="btnPrevYear" type="button">◀ AÑO ANTERIOR</button>
+          <div>
+            <h2 class="panel-title" id="yearTitle">REINO ANUAL</h2>
+            <p class="panel-subtitle">Doce pisos para planificar tu aventura académica.</p>
+          </div>
+          <button class="btn-pixel" id="btnNextYear" type="button">AÑO SIGUIENTE ▶</button>
+        </div>
+      </div>
+
+      <div class="year-realm-container">
+        <div class="realm-banner">
+          <div class="year-progress-box">
+            <div style="font-size: 10px; color: var(--color-gold);" id="yearProgressText">PROGRESO DEL AÑO: CALCULANDO...</div>
+            <div class="progress-bar-pixel">
+              <div class="progress-bar-fill" id="yearFill"></div>
+            </div>
+          </div>
+          <div style="font-size: 9px; color: #fff;" id="yearBossStats">
+            🐉 JEFES SUPREMOS: 0/0 DERROTADOS
+          </div>
+        </div>
+
+        <div class="realm-castles-grid" id="yearCastles">
+          <!-- Generado dinámicamente: 12 castillos/meses -->
+        </div>
+      </div>
+    </section>
+
+    <!-- CAMPO DE BATALLA / STAGE ANIMADO CONTINUO -->
+    <section class="battle-arena-card" id="battleArenaCard" aria-label="Campo de Batalla">
+      <div class="arena-header">
+        <span>ENCUENTRO SELECCIONADO</span>
+        <span class="arena-status" id="encounterStatus">EXPLORACIÓN</span>
+      </div>
+
+      <div class="arena-canvas-wrap">
+        <canvas id="battleCanvas" role="img" aria-label="Caballero frente al guardián de la misión"></canvas>
+      </div>
+
+      <div class="battle-dashboard">
+        <!-- Diálogo Retro RPG -->
+        <div class="dialogue-box">
+          <div>
+            <div class="dialogue-speaker" id="dialogueSpeaker">EXPLORACIÓN</div>
+            <div class="dialogue-text" id="dialogueText">
+              ¡Bienvenido a la mazmorra de parciales y finales! Selecciona una actividad o ataca para practicar tus combos.
+            </div>
+          </div>
+          <div class="dialogue-meta" id="questInfoMeta">
+            Sin encuentros inmediatos.
+          </div>
+        </div>
+
+        <!-- Botones de Acción de Combate -->
+        <div class="combat-action-deck">
+          <div class="combat-buttons-grid">
+            <button class="btn-pixel btn-danger" id="btnAttack" type="button">Atacar</button>
+            <button class="btn-pixel btn-primary" id="btnDefend" type="button">Defender</button>
+            <button class="btn-pixel" style="background: var(--color-purple); color: #fff;" id="btnSpell" type="button">Magia</button>
+            <button class="btn-pixel" id="btnAutoFight" type="button">Auto</button>
+          </div>
+          <div style="display: flex; gap: 6px; margin-top: 4px;">
+            <button class="btn-pixel btn-gold" style="flex: 1;" id="btnApprove" type="button">🏆 MARCAR APROBADO</button>
+            <button class="btn-pixel btn-danger" style="padding: 6px 8px;" id="btnDeleteQuest" type="button" title="Eliminar misión" aria-label="Eliminar misión">×</button>
+          </div>
+        </div>
+      </div>
+      <div class="quest-agenda">
+        <div class="agenda-heading"><h3 id="agendaDate">Misiones del día</h3><span id="agendaCount">0</span></div>
+        <div id="questAgenda"></div>
+        <button class="btn-pixel agenda-add" id="agendaAddBtn" type="button">+ Agregar a este día</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="retro-footer">
+    <p>ÓRBITA <span>·</span> Cada conquista empieza con un poco de preparación.</p>
+    <button class="footer-demo" id="seedBtn" type="button">Cargar misiones de ejemplo</button>
+  </footer>
+
+  <!-- MODAL: ALTAR DE LA DIOSA DE LA SABIDURÍA -->
+  <div class="modal-overlay" id="goddessModal">
+    <div class="modal-dialog">
+      <div class="modal-head">
+        <span>🕊️ ALTAR SAGRADO DE LA DIOSA DE LA SABIDURÍA</span>
+        <button class="modal-close" id="btnCloseGoddess" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="altar-hero-box">
+          <img class="altar-statue-img" src="/assets/sprites/frames/goddess_statue_cutout.png" alt="Estatua de la Diosa de la Sabiduría">
+          <div class="altar-oracle-text" id="goddessOracleText">
+            "Acércate, estudiante valiente. Reza a la Diosa Minerva y recibe su bendición para tus parciales y finales."
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+          <button class="btn-pixel btn-gold" id="btnPrayGoddess" type="button">✨ REZAR POR ILUMINACIÓN</button>
+          <button class="btn-pixel btn-green" id="btnOfferGold" type="button">🪙 OFRENDA DE 10 ORO</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ARMERÍA & CUSTOMIZACIÓN DE PERSONAJE -->
+  <div class="modal-overlay" id="armoryModal">
+    <div class="modal-dialog wide">
+      <div class="modal-head">
+        <span>⚔️ ARMERÍA & TALLER DE FORJA DEL HÉROE</span>
+        <button class="modal-close" id="btnCloseArmory" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="armory-customizer-grid">
+          <div class="armory-preview-box">
+            <span style="font-size: 9px; color: var(--color-gold);">VISTA PREVIA DEL HÉROE</span>
+            <canvas class="armory-preview-canvas" id="armoryPreviewCanvas" width="140" height="140"></canvas>
+            <span id="armoryThemeLabel" style="font-size: 8px; color: #fff;">Armadura: Azul Real</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div>
+              <label class="form-label">TEMA DE COLOR DE ARMADURA:</label>
+              <div class="swatch-picker" id="armorThemeSwatches">
+                <button class="swatch-btn swatch-classic selected" data-theme="classic" style="background: #1d4ed8; color: #fff;">Azul Real</button>
+                <button class="swatch-btn swatch-gold" data-theme="gold" style="background: #b45309; color: #fff;">Oro Sagrado</button>
+                <button class="swatch-btn swatch-crimson" data-theme="crimson" style="background: #991b1b; color: #fff;">Carmesí Furia</button>
+                <button class="swatch-btn swatch-shadow" data-theme="shadow" style="background: #1f2937; color: #fff;">Sombra Nocturna</button>
+                <button class="swatch-btn swatch-amethyst" data-theme="amethyst" style="background: #581c87; color: #fff;">Amatista Arcano</button>
+                <button class="swatch-btn swatch-emerald" data-theme="emerald" style="background: #065f46; color: #fff;">Esmeralda Guardián</button>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">ARMA EQUIPADA:</label>
+                <select class="form-select" id="armoryWeaponSelect">
+                  <option value="steel">⚔️ Espada de Acero Académico</option>
+                  <option value="claymore">🗡️ Mandoble del Saber Supremo</option>
+                  <option value="flame">🔥 Hoja de la Inspiración Divina</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">ESCUDO EQUIPADO:</label>
+                <select class="form-select" id="armoryShieldSelect">
+                  <option value="wood">🛡️ Broquel de Estudio Básico</option>
+                  <option value="truth">🛡️ Escudo de la Verdad Científica</option>
+                  <option value="aegis">✨ Égida Sagrada Anti-Boletines</option>
+                </select>
+              </div>
+            </div>
+
+            <p style="font-size: 8px; color: var(--text-muted);">
+              Al guardar, tu héroe mantendrá esta apariencia en el Lobby, en el Pasillo de las Horas y en la Arena de Batalla.
+            </p>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+              <button class="btn-pixel btn-gold" id="btnSaveArmory" type="button">💾 EQUIPAR Y FORJAR</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: HABITACIÓN DEL HÉROE -->
+  <div class="modal-overlay" id="bedroomModal">
+    <div class="modal-dialog">
+      <div class="modal-head">
+        <span>🛏️ HABITACIÓN PRIVADA DEL CABALLERO</span>
+        <button class="modal-close" id="btnCloseBedroom" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 9px; color: var(--color-gold);">
+          Tu santuario de descanso entre jornadas de cursada y sesiones de estudio.
+        </p>
+
+        <div style="background: #090914; border: 2px solid #000; padding: 12px; font-size: 9px; line-height: 1.6;" id="bedroomStatusText">
+          🛏️ Cama de roble nórdico tendida.<br>
+          🔥 Chimenea encendida crepitando suavemente.<br>
+          📖 Cuaderno de apuntes abierto sobre el escritorio.
+        </div>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn-pixel btn-primary" id="btnRestHero" type="button">💤 DORMIR Y REPASAR (Zzz)</button>
+          <button class="btn-pixel btn-gold" id="btnStudyTip" type="button">💡 CONSEJO DE ESTUDIO</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SALA DE MAGIA & ALQUIMIA -->
+  <div class="modal-overlay" id="magicModal">
+    <div class="modal-dialog wide">
+      <div class="modal-head">
+        <span>🔮 SALA DE MAGIA & LABORATORIO ALQUÍMICO</span>
+        <button class="modal-close" id="btnCloseMagic" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 9px; color: var(--color-cyan); margin-bottom: 4px;">
+          Prepara brebajes mágicos para potenciar tu rendimiento académico:
+        </p>
+
+        <div class="potions-list-grid">
+          <div class="potion-card">
+            <div>
+              <strong class="potion-card-title">☕ Poción de Café Expreso</strong>
+              <p class="potion-card-desc">Otorga +50% resistencia al sueño para noches previas a entregas importantes.</p>
+            </div>
+            <button class="btn-pixel btn-gold" data-potion="cafe" type="button">🧪 PREPARAR</button>
+          </div>
+
+          <div class="potion-card">
+            <div>
+              <strong class="potion-card-title">🧪 Elixir de Memoria Fotográfica</strong>
+              <p class="potion-card-desc">Facilita recordar fórmulas, teoremas y fechas de parciales sin vacilar.</p>
+            </div>
+            <button class="btn-pixel btn-gold" data-potion="memoria" type="button">🧪 PREPARAR</button>
+          </div>
+
+          <div class="potion-card">
+            <div>
+              <strong class="potion-card-title">🌿 Té Calmante Anti-Pánico</strong>
+              <p class="potion-card-desc">Reduce el estrés del examen a cero y llena el corazón de serenidad estoica.</p>
+            </div>
+            <button class="btn-pixel btn-gold" data-potion="calma" type="button">🧪 PREPARAR</button>
+          </div>
+
+          <div class="potion-card">
+            <div>
+              <strong class="potion-card-title">🔮 Brebaje Anti-Procrastinación</strong>
+              <p class="potion-card-desc">Inmunidad total a revisar redes sociales mientras preparas los trabajos prácticos.</p>
+            </div>
+            <button class="btn-pixel btn-gold" data-potion="focus" type="button">🧪 PREPARAR</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: BÓVEDA DE ARTEFACTOS & TROFEOS -->
+  <div class="modal-overlay" id="artifactsModal">
+    <div class="modal-dialog wide">
+      <div class="modal-head">
+        <span>🏆 BÓVEDA DE ARTEFACTOS & RELIQUIAS</span>
+        <button class="modal-close" id="btnCloseArtifacts" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 9px; color: var(--color-gold); margin-bottom: 6px;">
+          Reliquias legendarias forjadas a partir de tus parciales y finales completados:
+        </p>
+
+        <div class="artifacts-vault-grid" id="artifactsVaultGrid">
+          <!-- Generado dinámicamente según misiones aprobadas -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: FORJAR NUEVA MISIÓN / ACTIVIDAD -->
+  <div class="modal-overlay" id="questModal">
+    <div class="modal-dialog">
+      <div class="modal-head">
+        <span>⚔️ FORJAR NUEVA MISIÓN ACADÉMICA</span>
+        <button class="modal-close" id="btnCancelQuest" type="button">✕</button>
+      </div>
+      <form class="modal-body" id="questForm">
+        <p class="form-error" id="questFormError" role="alert" hidden></p>
+        <div class="form-group">
+          <label class="form-label" for="questSubject">NOMBRE DE LA MATERIA / MISIÓN *</label>
+          <input class="form-input" id="questSubject" type="text" required placeholder="Ej: Álgebra Lineal, Algoritmos, Física II">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="questType">TIPO DE ENCUENTRO *</label>
+            <select class="form-select" id="questType">
+              <option value="parcial">👹 Parcial (Goblin Guardián)</option>
+              <option value="final">🐉 Final (Dragón Jefe Supremo)</option>
+              <option value="tarea">🧪 Tarea / TP (Slime Minion)</option>
+              <option value="cursada">📜 Cursada / Clase de Mazmorra</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="questDate">FECHA (YYYY-MM-DD) *</label>
+            <input class="form-input" id="questDate" type="date" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="questTime">HORA (HH:MM)</label>
+            <input class="form-input" id="questTime" type="time">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="questLocation">AULA / SEDE / SALA</label>
+            <input class="form-input" id="questLocation" type="text" placeholder="Ej: Aula 4-5, Laboratorio">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="questTopics">TEMARIO / APUNTES / NOTAS</label>
+          <textarea class="form-textarea" id="questTopics" rows="3" placeholder="Ej: Vectores, Matrices, Teorema de Gauss..."></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+          <button class="btn-pixel btn-gold" type="submit">FORJAR MISIÓN</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: BESTIARIO Y GALERÍA DE SPRITES GENERADOS -->
+  <div class="modal-overlay" id="bestiaryModal">
+    <div class="modal-dialog wide">
+      <div class="modal-head">
+        <span>📖 BESTIARIO Y GALERÍA DE SPRITES 8-BIT</span>
+        <button class="modal-close" id="btnCloseBestiary" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 9px; color: var(--color-gold); margin-bottom: 8px;">
+          Todos los sprites generados por el motor de inteligencia artificial en estilo retro NES 8-bit:
+        </p>
+        <div class="bestiary-grid">
+          <!-- Sprite: Caballero Héroe -->
+          <div class="bestiary-card">
+            <strong style="color: var(--color-gold); font-size: 10px;">🛡️ Caballero del Conocimiento</strong>
+            <div class="bestiary-sheet-preview">
+              <img src="/assets/sprites/hero_knight.jpg" alt="Sprite Sheet del Caballero">
+            </div>
+            <p class="bestiary-desc">
+              Héroe protagonista con 4 animaciones principales: Idle (4 frames), Caminata (8 frames), Golpe de Espada (6 frames) y Bloqueo con Escudo (4 frames).
+            </p>
+          </div>
+
+          <!-- Sprite: Estatua de la Diosa -->
+          <div class="bestiary-card">
+            <strong style="color: var(--color-gold); font-size: 10px;">🕊️ Estatua de la Diosa de la Sabiduría</strong>
+            <div class="bestiary-sheet-preview">
+              <img src="/assets/sprites/goddess_statue.jpg" alt="Estatua de la Diosa">
+            </div>
+            <p class="bestiary-desc">
+              Monumento de piedra sagrado en el Altar Central. Sostiene el Libro del Conocimiento y la Antorcha Eterna para guiar al estudiante.
+            </p>
+          </div>
+
+          <!-- Sprite: Goblin del Parcial -->
+          <div class="bestiary-card">
+            <strong style="color: var(--color-green); font-size: 10px;">👹 Goblin del Parcial</strong>
+            <div class="bestiary-sheet-preview">
+              <img src="/assets/sprites/monster_parcial.jpg" alt="Sprite Sheet del Goblin">
+            </div>
+            <p class="bestiary-desc">
+              Monstruo armado con un rollo de preguntas sorpresa. Posee animaciones de acecho, embestida con pergamino y reacción de golpe aturdido.
+            </p>
+          </div>
+
+          <!-- Sprite: Dragón del Final Supremo -->
+          <div class="bestiary-card">
+            <strong style="color: var(--color-red); font-size: 10px;">🐉 Dragón Jefe Supremo</strong>
+            <div class="bestiary-sheet-preview">
+              <img src="/assets/sprites/boss_final.jpg" alt="Sprite Sheet del Dragón">
+            </div>
+            <p class="bestiary-desc">
+              Jefe de Cátedra de las mesas finales. Posee respiración amenazante, rugido con llamarada ardiente, retroceso y postura de derrota.
+            </p>
+          </div>
+
+          <!-- Sprite: Slime de Tareas -->
+          <div class="bestiary-card">
+            <strong style="color: var(--color-cyan); font-size: 10px;">🧪 Slime Minion de Tareas</strong>
+            <div class="bestiary-sheet-preview">
+              <img src="/assets/sprites/monster_slime.jpg" alt="Sprite Sheet de Slimes">
+            </div>
+            <p class="bestiary-desc">
+              Criaturas de entregas de trabajos prácticos y lecturas semanales. Rebota continuamente y se aplasta al recibir impacto de apuntes.
+            </p>
+          </div>
+
+          <!-- Escenario: Pasillo de la Mazmorra -->
+          <div class="bestiary-card">
+            <strong style="color: var(--color-gold); font-size: 10px;">🏰 Pasillo de Mazmorra</strong>
+            <div class="bestiary-sheet-preview">
+              <img src="/assets/bg/dungeon_bg.jpg" alt="Pasillo de la Mazmorra">
+            </div>
+            <p class="bestiary-desc">
+              Muros de piedra ancestrales y antorchas encendidas que alumbran el camino del estudiante hacia la graduación.
+            </p>
+          </div>
+
+          <!-- Escenario: Lobby del Gremio -->
+          <div class="bestiary-card">
+            <strong style="color: var(--color-gold); font-size: 10px;">🏰 Salón Principal del Gremio</strong>
+            <div class="bestiary-sheet-preview">
+              <img src="/assets/bg/guild_lobby.jpg" alt="Lobby del Gremio">
+            </div>
+            <p class="bestiary-desc">
+              El corazón del castillo donde reposan la Armería, la Sala de Magia, los aposentos del héroe y la bóveda de trofeos.
+            </p>
+          </div>
+
+          <!-- Escenario: Mapa del Reino -->
+          <div class="bestiary-card">
+            <strong style="color: var(--color-gold); font-size: 10px;">🗺️ Mapa del Reino de Lork</strong>
+            <div class="bestiary-sheet-preview">
+              <img src="/assets/bg/dungeon_map.jpg" alt="Mapa del Reino">
+            </div>
+            <p class="bestiary-desc">
+              El mapa territorial que ilustra la odisea de 365 días a lo largo de los 12 meses del ciclo lectivo.
+            </p>
+          </div>
+
+          <!-- Escenario: Salón Isométrico del Gremio -->
+          <div class="bestiary-card">
+            <strong style="color: var(--color-cyan); font-size: 10px;">🏰 Gran Salón Isométrico (16-Bit)</strong>
+            <div class="bestiary-sheet-preview">
+              <img src="/assets/bg/lobby_isometric.jpg" alt="Gran Salón Isométrico">
+            </div>
+            <p class="bestiary-desc">
+              Arquitectura isométrica en perspectiva 2.5D que alberga todas las salas del gremio (Altar, Armería, Dormitorio, Alquimia y Portal).
+            </p>
+          </div>
+
+          <!-- Spritesheet: Caballero Isométrico -->
+          <div class="bestiary-card">
+            <strong style="color: var(--color-gold); font-size: 10px;">⚔️ Caballero Isométrico 4 Direcciones</strong>
+            <div class="bestiary-sheet-preview">
+              <img src="/assets/sprites/knight_isometric.jpg" alt="Caballero Isométrico">
+            </div>
+            <p class="bestiary-desc">
+              Spritesheet con animaciones completas en 4 ángulos isométricos (Abajo-Derecha, Abajo-Izquierda, Arriba-Izquierda, Arriba-Derecha) y tajos dorados.
+            </p>
+          </div>
+
+          <!-- Spritesheet: Pixel el Gato -->
+          <div class="bestiary-card">
+            <strong style="color: #fb923c; font-size: 10px;">🐱 Pixel el Gato del Gremio</strong>
+            <div class="bestiary-sheet-preview">
+              <img src="/assets/sprites/cat_pixel_sheet.jpg" alt="Pixel el Gato Spritesheet">
+            </div>
+            <p class="bestiary-desc">
+              Spritesheet detallado de 16 fotogramas con 4 animaciones: sentado con parpadeo y cola móvil, durmiendo acurrucado, estirándose y lamiéndose la patita.
+            </p>
+          </div>
+
+          <!-- Spritesheet: Elenco de NPCs del Gremio -->
+          <div class="bestiary-card">
+            <strong style="color: var(--color-cyan); font-size: 10px;">👥 Elenco de NPCs del Gremio</strong>
+            <div class="bestiary-sheet-preview">
+              <img src="/assets/sprites/guild_npcs_sheet.jpg" alt="NPCs del Gremio">
+            </div>
+            <p class="bestiary-desc">
+              Elenco en perspectiva 16-bit: Maestro Herrero Brokk en la forja, Alquimista Elenia mezclando brebajes, Recepcionista Vane en el tablón y Sacerdotisa Minerva.
+            </p>
+          </div>
+
+          <!-- Spritesheet: Anticuario y Búho Sabio -->
+          <div class="bestiary-card">
+            <strong style="color: #a855f7; font-size: 10px;">🦉 Búho Archimedes & Anticuario Grikk</strong>
+            <div class="bestiary-sheet-preview">
+              <img src="/assets/sprites/vault_bedroom_sheet.jpg" alt="Anticuario y Búho Sabio">
+            </div>
+            <p class="bestiary-desc">
+              Grikk el Anticuario inspeccionando la bóveda de trofeos con su monóculo y cofre de gemas, y el Búho Sabio Archimedes con birrete académico y farol de estudio.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS DEL JUEGO -->
+  <script src="/js/sprite_engine.js"></script>
+  <script src="/js/lobby.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
