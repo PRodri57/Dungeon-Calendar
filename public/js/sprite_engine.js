@@ -197,17 +197,17 @@
     '.': null,                     // Transparente
     '0': '#000000',                // Negro borde
     'W': '#ffffff',                // Blanco
-    'B': '#1d4ed8',                // Azul armadura oscuro
-    'b': '#3b82f6',                // Azul armadura brillante
-    'L': '#93c5fd',                // Celeste reflejo
-    'G': '#f59e0b',                // Oro / Escudo
-    'g': '#fbbf24',                // Oro claro
-    'R': '#dc2626',                // Rojo pluma / capa
-    'r': '#ef4444',                // Rojo claro
+    'B': '#475569',                // Acero plateado oscuro (sombra metálica)
+    'b': '#94a3b8',                // Acero plateado medio
+    'L': '#e2e8f0',                // Plata reflejo especular
+    'G': '#d4af37',                // Oro detalle / filigrana
+    'g': '#fef08a',                // Oro brillo claro
+    'R': '#4a2024',                // Capa / pluma vino sobrio (realista)
+    'r': '#6b2d35',                // Capa / pluma vino medio
     'S': '#9ca3af',                // Acero espada
     's': '#e5e7eb',                // Acero brillo
     'K': '#fcd34d',                // Piel / Visor
-    'k': '#b45309',                // Cuero botas
+    'k': '#4a3b32',                // Cuero botas realista
     // Goblin
     'O': '#15803d',                // Verde orco oscuro
     'o': '#22c55e',                // Verde orco claro
@@ -566,12 +566,12 @@
   };
 
   const ARMOR_THEMES = {
-    classic: { 'B': '#1d4ed8', 'b': '#3b82f6', 'L': '#93c5fd' },
-    gold:    { 'B': '#b45309', 'b': '#f59e0b', 'L': '#fef08a' },
-    crimson: { 'B': '#991b1b', 'b': '#ef4444', 'L': '#fca5a5' },
-    shadow:  { 'B': '#1f2937', 'b': '#4b5563', 'L': '#9ca3af' },
-    amethyst:{ 'B': '#581c87', 'b': '#9333ea', 'L': '#d8b4fe' },
-    emerald: { 'B': '#065f46', 'b': '#10b981', 'L': '#6ee7b7' }
+    classic: { 'B': '#475569', 'b': '#94a3b8', 'L': '#e2e8f0', 'G': '#d4af37', 'g': '#fef08a' },
+    gold:    { 'B': '#b45309', 'b': '#f59e0b', 'L': '#fef08a', 'G': '#fbbf24', 'g': '#ffffff' },
+    crimson: { 'B': '#991b1b', 'b': '#ef4444', 'L': '#fca5a5', 'G': '#d4af37', 'g': '#fef08a' },
+    shadow:  { 'B': '#1f2937', 'b': '#4b5563', 'L': '#9ca3af', 'G': '#b45309', 'g': '#f59e0b' },
+    amethyst:{ 'B': '#581c87', 'b': '#9333ea', 'L': '#d8b4fe', 'G': '#d4af37', 'g': '#fef08a' },
+    emerald: { 'B': '#065f46', 'b': '#10b981', 'L': '#6ee7b7', 'G': '#d4af37', 'g': '#fef08a' }
   };
 
   const CAT_FRAMES = {
@@ -902,7 +902,7 @@
         goblin: '/assets/sprites/monster_parcial.jpg',
         dragon: '/assets/sprites/boss_final.jpg',
         slime: '/assets/sprites/monster_slime.jpg',
-        corridor: '/assets/bg/dungeon_bg.jpg',
+        corridor: '/assets/bg/castle_corridor_16bit.jpg',
         map: '/assets/bg/dungeon_map.jpg',
         goddess: '/assets/sprites/goddess_statue.jpg',
         lobby_bg: '/assets/bg/guild_lobby.jpg',
@@ -1230,8 +1230,8 @@
       ctx.fillStyle = '#374151';
       ctx.fillRect(x + 2, y + 12, 12, 6);
 
-      // Fuego parpadeante de antorcha
-      const flicker = (Math.sin(tick * 0.2) * 2);
+      // Fuego parpadeante de antorcha (animación pausada y atmosférica)
+      const flicker = (Math.sin(tick * 0.08) * 1.5);
       ctx.fillStyle = '#f97316';
       ctx.fillRect(x + 2 - flicker, y - 4, 12 + flicker * 2, 16);
       ctx.fillStyle = '#facc15';

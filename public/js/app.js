@@ -431,8 +431,8 @@
       x,
       y,
       color,
-      life: 50,
-      maxLife: 50
+      life: 80,
+      maxLife: 80
     });
   }
 
@@ -462,8 +462,8 @@
       const monsterH = state.monster.type === 'final' ? 165 : state.monster.type === 'parcial' ? 125 : 85;
       const monsterY = h - (heroScale / 4) * monsterH - 12;
 
-      // Animar frames según tick
-      if (state.tick % 10 === 0) {
+      // Animar frames según tick (animación más lenta de estilo 16-bit)
+      if (state.tick % 22 === 0) {
         state.hero.frame = reducedMotion.matches ? 0 : state.hero.frame + 1;
         state.monster.frame = reducedMotion.matches ? 0 : state.monster.frame + 1;
       }
@@ -498,7 +498,7 @@
       for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
         const ft = state.floatingTexts[i];
         ft.life--;
-        ft.y -= 1.2;
+        ft.y -= 0.6;
         const alpha = ft.life / ft.maxLife;
 
         battleCtx.save();
@@ -522,7 +522,7 @@
     audio.playSwordSwing();
     state.hero.state = 'attack';
     state.hero.flash = true;
-    setTimeout(() => { state.hero.flash = false; }, 100);
+    setTimeout(() => { state.hero.flash = false; }, 180);
 
     setTimeout(() => {
       audio.playMonsterHit();
@@ -538,8 +538,8 @@
         state.monster.flash = false;
         state.monster.state = 'idle';
         state.hero.state = 'idle';
-      }, 350);
-    }, 180);
+      }, 550);
+    }, 280);
   }
 
   function triggerHeroDefend() {
@@ -555,7 +555,7 @@
       state.hero.flash = false;
       state.hero.state = 'idle';
       state.monster.state = 'idle';
-    }, 450);
+    }, 650);
   }
 
   function triggerHeroSpell() {
@@ -573,8 +573,8 @@
         state.monster.flash = false;
         state.monster.state = 'idle';
         state.hero.state = 'idle';
-      }, 400);
-    }, 300);
+      }, 550);
+    }, 380);
   }
 
   function toggleAutoFight() {

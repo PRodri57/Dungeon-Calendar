@@ -37,13 +37,34 @@
         flip: false
       };
 
-      // Partículas y efectos ambientales
+      // Partículas y efectos ambientales mejorados
       this.forgeSparks = [];
       this.alchemyBubbles = [];
       this.magicParticles = [];
       this.floatingHearts = [];
+      this.dustParticles = [];
+      this.fireEmbers = [];
       this.clickMarker = null;
       this.tick = 0;
+
+      // Obstáculos sólidos con colisión física en el gran salón isométrico
+      this.obstacles = [
+        // Altar central superior de piedra
+        { id: 'altar_structure', x: 430, y: 130, width: 164, height: 160 },
+        // Gran tablón de madera de misiones (izquierda)
+        { id: 'bulletin_board', x: 20, y: 410, width: 120, height: 150 },
+        // Mobiliario de descanso / alcoba (esquina superior izquierda)
+        { id: 'bedroom_furniture', x: 25, y: 240, width: 110, height: 130 },
+        // Estanterías de la biblioteca (muro superior derecho)
+        { id: 'bookshelves', x: 530, y: 220, width: 210, height: 170 },
+        // Chimenea y hogar de piedra con fuego
+        { id: 'fireplace_structure', x: 865, y: 390, width: 115, height: 110 },
+        // Yunque de hierro y hornalla de herrería (inferior derecha)
+        { id: 'forge_anvil', x: 860, y: 720, width: 125, height: 130 },
+        // Mesas de madera y bancos de la taberna (inferior izquierda)
+        { id: 'tavern_table_1', x: 35, y: 620, width: 135, height: 75 },
+        { id: 'tavern_table_2', x: 200, y: 720, width: 135, height: 75 }
+      ];
 
       // Teclas activas
       this.keys = {};
@@ -318,7 +339,32 @@
       this.clickMarker = null;
     }
 
-    // Actualiza movimiento, física y comportamiento de NPCs y Cat
+    // Comprueba colisiones con paredes perimetrales y mobiliario sólido del salón
+    isBlocked(x, y, radius = 16) {
+      // 1. Límites perimetrales de la sala
+      if (x - radius < 140 || x + radius > this.worldW - 140) return true;
+      if (y - radius < 180 || y + radius > this.worldH - 70) return true;
+
+      // 2. Esquinas diagonales isométricas
+      if ((460 - x) * 0.7 + (220 - y) > -radius) return true;
+      if ((x - 564) * 0.7 + (220 - y) > -radius) return true;
+
+      // 3. Muebles y elementos arquitectónicos sólidos
+      for (let i = 0; i < this.obstacles.length; i++) {
+        const obs = this.obstacles[i];
+        if (
+          x + radius > obs.x &&
+          x - radius < obs.x + obs.width &&
+          y + radius > obs.y &&
+          y - radius < obs.y + obs.height
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Actualiza movimiento, física de colisiones y efectos ambientales
     update() {
       this.tick++;
       if (document.querySelector('.modal-overlay.open')) {
@@ -328,7 +374,7 @@
       let dx = 0;
       let dy = 0;
 
-      // Movimiento por teclado con soporte isométrico
+      // Movimiento por teclado con soporte isométrico y colisiones
       if (this.keys['arrowup'] || this.keys['w']) dy -= 1;
       if (this.keys['arrowdown'] || this.keys['s']) dy += 1;
       if (this.keys['arrowleft'] || this.keys['a']) dx -= 1;
@@ -336,9 +382,34 @@
 
       if (dx !== 0 || dy !== 0) {
         const len = Math.hypot(dx, dy);
-        this.hero.x += (dx / len) * this.hero.speed;
-        this.hero.y += (dy / len) * this.hero.speed;
+        const stepX = (dx / len) * this.hero.speed;
+        const stepY = (dy / len) * this.hero.speed;
+        const nextX = this.hero.x + stepX;
+        const nextY = this.hero.y + stepY;
+
+        // Deslizamiento suave sobre paredes u obstáculos sólidos
+        if (!this.isBlocked(nextX, nextY)) {
+          this.hero.x = nextX;
+          this.hero.y = nextY;
+        } else if (!this.isBlocked(nextX, this.hero.y)) {
+          this.hero.x = nextX;
+        } else if (!this.isBlocked(this.hero.x, nextY)) {
+          this.hero.y = nextY;
+        }
         this.hero.moving = true;
+
+        // Partículas de polvo de pasos al caminar
+        if (this.tick % 10 === 0) {
+          this.dustParticles.push({
+            x: this.hero.x + (Math.random() * 8 - 4),
+            y: this.hero.y + 2,
+            vx: -stepX * 0.12 + (Math.random() - 0.5) * 0.2,
+            vy: -stepY * 0.12 - Math.random() * 0.2,
+            radius: 2 + Math.random() * 1.5,
+            life: 18,
+            maxLife: 18
+          });
+        }
 
         if (dx > 0 && dy >= 0) this.hero.direction = 'dr';
         else if (dx < 0 && dy >= 0) this.hero.direction = 'dl';
@@ -352,15 +423,32 @@
         const dist = Math.hypot(toX, toY);
 
         if (dist > 5) {
-          this.hero.x += (toX / dist) * this.hero.speed;
-          this.hero.y += (toY / dist) * this.hero.speed;
+          const stepX = (toX / dist) * this.hero.speed;
+          const stepY = (toY / dist) * this.hero.speed;
+          this.hero.x += stepX;
+          this.hero.y += stepY;
           this.hero.moving = true;
+
+          // Partículas de pasos
+          if (this.tick % 10 === 0) {
+            this.dustParticles.push({
+              x: this.hero.x + (Math.random() * 8 - 4),
+              y: this.hero.y + 2,
+              vx: -stepX * 0.12 + (Math.random() - 0.5) * 0.2,
+              vy: -stepY * 0.12 - Math.random() * 0.2,
+              radius: 2 + Math.random() * 1.5,
+              life: 18,
+              maxLife: 18
+            });
+          }
 
           if (toX >= 0 && toY >= 0) this.hero.direction = 'dr';
           else if (toX < 0 && toY >= 0) this.hero.direction = 'dl';
           else if (toX >= 0 && toY < 0) this.hero.direction = 'ur';
           else if (toX < 0 && toY < 0) this.hero.direction = 'ul';
         } else {
+          this.hero.x = this.hero.targetX;
+          this.hero.y = this.hero.targetY;
           this.hero.moving = false;
           this.hero.targetX = null;
           this.hero.targetY = null;
@@ -373,13 +461,43 @@
         this.hero.moving = false;
       }
 
-      // Restricciones de sala (paredes del castillo isométrico)
+      // Restricciones perimetrales de sala (paredes del castillo isométrico)
       this.hero.x = Math.max(140, Math.min(this.worldW - 140, this.hero.x));
       this.hero.y = Math.max(180, Math.min(this.worldH - 70, this.hero.y));
 
-      // Frames de animación del héroe (4 frames por ciclo)
+      // Actualizar partículas de polvo de pasos
+      for (let i = this.dustParticles.length - 1; i >= 0; i--) {
+        const d = this.dustParticles[i];
+        d.x += d.vx;
+        d.y += d.vy;
+        d.life--;
+        if (d.life <= 0) this.dustParticles.splice(i, 1);
+      }
+
+      // Actualizar ascuas de la chimenea
+      if (this.tick % 7 === 0) {
+        this.fireEmbers.push({
+          x: 808 + (Math.random() * 16 - 8),
+          y: 468,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: -0.7 - Math.random() * 0.8,
+          radius: 1.5 + Math.random() * 1.2,
+          life: 40,
+          maxLife: 40,
+          color: Math.random() > 0.35 ? '#fbbf24' : '#f97316'
+        });
+      }
+      for (let i = this.fireEmbers.length - 1; i >= 0; i--) {
+        const e = this.fireEmbers[i];
+        e.x += e.vx;
+        e.y += e.vy;
+        e.life--;
+        if (e.life <= 0) this.fireEmbers.splice(i, 1);
+      }
+
+      // Frames de animación del héroe (4 frames por ciclo, velocidad pausada 16-bit)
       if (this.hero.moving) {
-        if (this.tick % 7 === 0) {
+        if (this.tick % 15 === 0) {
           this.hero.frame = (this.hero.frame + 1) % 4;
         }
       } else {
@@ -456,41 +574,41 @@
         this.cat.timer = 140 + Math.floor(Math.random() * 220);
         if (Math.random() < 0.3) this.cat.flip = !this.cat.flip;
       }
-      const catSpeed = this.cat.state === 'sleep' ? 20 : 10;
+      const catSpeed = this.cat.state === 'sleep' ? 36 : 22;
       this.cat.frame = Math.floor(this.tick / catSpeed) % 4;
 
       // Chispas del yunque del herrero Brokk
-      if (this.tick % 8 === 0) {
+      if (this.tick % 16 === 0) {
         this.forgeSparks.push({
           x: 848 + (Math.random() * 24 - 12),
           y: 775 + (Math.random() * 10 - 5),
-          vx: (Math.random() - 0.5) * 3,
-          vy: -2 - Math.random() * 2.2,
+          vx: (Math.random() - 0.5) * 2,
+          vy: -1.2 - Math.random() * 1.5,
           color: Math.random() > 0.4 ? '#fbbf24' : '#f97316',
-          life: 20,
-          maxLife: 20
+          life: 30,
+          maxLife: 30
         });
       }
       for (let i = this.forgeSparks.length - 1; i >= 0; i--) {
         const s = this.forgeSparks[i];
         s.x += s.vx;
         s.y += s.vy;
-        s.vy += 0.22;
+        s.vy += 0.12;
         s.life--;
         if (s.life <= 0) this.forgeSparks.splice(i, 1);
       }
 
       // Burbujas alquímicas de la mesa de pociones de Elenia
-      if (this.tick % 11 === 0) {
+      if (this.tick % 20 === 0) {
         this.alchemyBubbles.push({
           x: 220 + (Math.random() * 26 - 13),
           y: 630,
-          vx: (Math.random() - 0.5) * 0.7,
-          vy: -0.9 - Math.random() * 0.7,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: -0.5 - Math.random() * 0.4,
           color: Math.random() > 0.5 ? '#c084fc' : '#38bdf8',
           radius: 2 + Math.random() * 3,
-          life: 35,
-          maxLife: 35
+          life: 60,
+          maxLife: 60
         });
       }
       for (let i = this.alchemyBubbles.length - 1; i >= 0; i--) {
@@ -575,72 +693,132 @@
         });
       });
 
-      // 4. Marcador de clic en el piso
+      // 4. Marcador de destino animado en el piso (brújula arcana dorada de 16 bits)
       if (this.clickMarker) {
         ctx.save();
         ctx.translate(this.clickMarker.x, this.clickMarker.y);
         ctx.scale(1, 0.55);
-        ctx.strokeStyle = this.clickMarker.color || '#f59e0b';
+        const progress = Math.max(0, 1 - (this.clickMarker.life / 25));
+        const alpha = Math.sin((1 - progress) * Math.PI * 0.5);
+        const spin = this.tick * 0.05;
+
+        // Anillo exterior pulsante
+        ctx.strokeStyle = `rgba(245, 158, 11, ${alpha * 0.9})`;
         ctx.lineWidth = 2.5;
-        const rad = (25 - this.clickMarker.life) * 1.8;
+        const outerR = 12 + progress * 16;
         ctx.beginPath();
-        ctx.arc(0, 0, rad, 0, Math.PI * 2);
+        ctx.arc(0, 0, outerR, 0, Math.PI * 2);
         ctx.stroke();
+
+        // Anillo interior brillante
+        ctx.strokeStyle = `rgba(254, 240, 138, ${alpha})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, 7, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 4 diamantes cardinales
+        ctx.fillStyle = `rgba(251, 191, 36, ${alpha})`;
+        for (let i = 0; i < 4; i++) {
+          const angle = spin + (i * Math.PI) / 2;
+          const px = Math.cos(angle) * (outerR + 2);
+          const py = Math.sin(angle) * (outerR + 2);
+          ctx.fillRect(px - 2, py - 2, 4, 4);
+        }
         ctx.restore();
       }
 
-      // 5. Renderizado de Entidades con Ordenamiento de Profundidad Isométrica (Y)
-      const entities = [
-        { type: 'npc', id: 'priestess', x: 512, y: 285, scale: 0.95 },
-        { type: 'npc', id: 'owl', x: 100, y: 325, scale: 0.88 },
-        { type: 'npc', id: 'collector', x: 885, y: 435, scale: 0.86 },
-        { type: 'npc', id: 'receptionist', x: 512, y: 535, scale: 0.86 },
-        { type: 'cat', x: this.cat.x, y: this.cat.y },
-        { type: 'hero', x: this.hero.x, y: this.hero.y },
-        { type: 'npc', id: 'alchemist', x: 210, y: 670, scale: 0.88 },
-        { type: 'npc', id: 'blacksmith', x: 860, y: 810, scale: 0.90 }
-      ];
+      // 5. Animación de chimenea de piedra y fuego (x: 808, y: 470)
+      const fireBaseX = 808;
+      const fireBaseY = 472;
+      const flicker1 = Math.sin(this.tick * 0.12) * 2;
+      const flicker2 = Math.cos(this.tick * 0.15) * 1.5;
 
-      entities.sort((a, b) => a.y - b.y);
+      ctx.save();
+      // Resplandor cálido ambiental sobre el piso
+      const glowGrad = ctx.createRadialGradient(fireBaseX, fireBaseY, 3, fireBaseX, fireBaseY, 48);
+      glowGrad.addColorStop(0, 'rgba(249, 115, 22, 0.28)');
+      glowGrad.addColorStop(0.5, 'rgba(234, 179, 8, 0.1)');
+      glowGrad.addColorStop(1, 'rgba(234, 179, 8, 0)');
+      ctx.fillStyle = glowGrad;
+      ctx.beginPath();
+      ctx.arc(fireBaseX, fireBaseY, 48, 0, Math.PI * 2);
+      ctx.fill();
 
-      entities.forEach(ent => {
-        if (ent.type === 'hero') {
-          // Sombra isométrica a los pies del Héroe
-          ctx.save();
-          ctx.translate(this.hero.x, this.hero.y);
-          ctx.scale(1, 0.45);
-          ctx.beginPath();
-          ctx.arc(0, 0, 22, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-          ctx.fill();
-          ctx.restore();
+      // Llamas ardientes en el hogar
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(fireBaseX - 10 + flicker2, fireBaseY - 14, 20 - flicker2, 16);
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(fireBaseX - 8 + flicker1, fireBaseY - 16, 16 - flicker1, 14);
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(fireBaseX - 5 - flicker2, fireBaseY - 18, 10 + flicker2, 12);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(fireBaseX - 2, fireBaseY - 14, 4, 8);
+      ctx.restore();
 
-          // Dibujar al Héroe
-          this.sprites.drawIsometricHero(
-            ctx,
-            this.hero.x,
-            this.hero.y,
-            this.hero.direction,
-            this.hero.frame,
-            1.5,
-            false,
-            this.sprites.armorTheme
-          );
-        } else if (ent.type === 'cat') {
-          this.sprites.drawDetailedCat(
-            ctx,
-            ent.x,
-            ent.y,
-            this.cat.state,
-            this.cat.frame,
-            1.4,
-            this.cat.flip
-          );
-        } else if (ent.type === 'npc') {
-          const bounce = Math.sin(this.tick * 0.05 + ent.x) * 1.5;
-          this.sprites.drawNPC(ctx, ent.id, ent.x, ent.y, 0, ent.scale, bounce);
-        }
+      // Ascuas flotantes de la chimenea
+      this.fireEmbers.forEach(e => {
+        const alpha = (e.life / e.maxLife) * 0.85;
+        ctx.fillStyle = e.color;
+        ctx.globalAlpha = alpha;
+        ctx.fillRect(e.x, e.y, e.radius, e.radius);
       });
+      ctx.globalAlpha = 1.0;
+
+      // 6. Antorchas en candelabros de pared
+      const torchSconces = [
+        { x: 180, y: 382 },
+        { x: 345, y: 298 },
+        { x: 980, y: 472 }
+      ];
+      torchSconces.forEach((ts, idx) => {
+        const tf = Math.sin(this.tick * 0.1 + idx) * 1.2;
+        ctx.save();
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.12)';
+        ctx.beginPath();
+        ctx.arc(ts.x, ts.y - 6, 16, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#f97316';
+        ctx.fillRect(ts.x - 3 + tf, ts.y - 12, 6, 8);
+        ctx.fillStyle = '#fde047';
+        ctx.fillRect(ts.x - 1.5 + tf * 0.5, ts.y - 14, 3, 6);
+        ctx.restore();
+      });
+
+      // 7. Partículas de polvo de pasos a los pies del héroe
+      this.dustParticles.forEach(d => {
+        const alpha = (d.life / d.maxLife) * 0.45;
+        ctx.fillStyle = `rgba(180, 170, 150, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // 8. Renderizado del Héroe en el Gran Salón (sin otros personajes en el fondo)
+      const idleBob = (!this.hero.moving) ? Math.sin(this.tick * 0.06) * 1.5 : 0;
+
+      // Sombra isométrica a los pies del Héroe
+      ctx.save();
+      ctx.translate(this.hero.x, this.hero.y);
+      ctx.scale(1, 0.45);
+      ctx.beginPath();
+      ctx.arc(0, 0, 22, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+      ctx.fill();
+      ctx.restore();
+
+      // Dibujar al Héroe con animación fluida de 16 bits
+      this.sprites.drawIsometricHero(
+        ctx,
+        this.hero.x,
+        this.hero.y + idleBob,
+        this.hero.direction,
+        this.hero.frame,
+        1.5,
+        false,
+        this.sprites.armorTheme
+      );
 
       // 6. Chispas del yunque en la armería
       this.forgeSparks.forEach(s => {

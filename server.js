@@ -103,7 +103,7 @@ app.get('/api/sprites', (_req, res) => {
       }
     },
     scenery: {
-      corridor: '/assets/bg/dungeon_bg.jpg',
+      corridor: '/assets/bg/castle_corridor_16bit.jpg',
       map: '/assets/bg/dungeon_map.jpg'
     }
   });
