@@ -1,0 +1,8 @@
+{
+  "name": "Órbita · Dungeon Calendar",
+  "description": "Tu aventura académica: organizá parciales, finales y entregas en un calendario de mazmorras con arte pixelado y HUD retro.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

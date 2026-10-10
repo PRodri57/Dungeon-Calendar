@@ -6,7 +6,9 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
+    "dev": "node server.js",
+    "build": "echo 'Build complete'",
+    "lint": "node --check server.js db.js public/js/*.js",
     "test": "node --test"
   },
   "dependencies": {
